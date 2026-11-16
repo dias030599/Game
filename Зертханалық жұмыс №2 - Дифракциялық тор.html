@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="kk">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Дифракциялық тор зертханасы</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Montserrat:wght@600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column; the two "instrument windows" (bench top view, view through the grating)
+   stay dark in both themes like a darkened physics room, everything else is lab-notebook paper. */
+:root{
+  --bg:#f1f5f7; --surface:#ffffff; --ink:#13212b; --muted:#566874; --line:#d3dce2;
+  --accent:#17708a; --accent-soft:#dff0f5; --on-accent:#ffffff;
+  --amber:#b96a10; --amber-soft:#fbefd9;
+  --ok:#197a48; --ok-soft:#dcf3e6; --bad:#b93434; --bad-soft:#fbe3e3;
+  --scope:#04080b; --scope-edge:#1d2a33; --scope-ink:#dbe6eb; --scope-muted:#8aa0ad;
+  --f-display:"Montserrat","Segoe UI",Arial,sans-serif;
+  --f-body:"Golos Text","Segoe UI",Roboto,Arial,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0c1317; --surface:#141d23; --ink:#e5edf1; --muted:#93a5b0; --line:#27353e;
+    --accent:#56b9d4; --accent-soft:#143440; --on-accent:#06222b;
+    --amber:#e9a54b; --amber-soft:#3a2a12;
+    --ok:#55c98d; --ok-soft:#123424; --bad:#f17878; --bad-soft:#3d1717;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0c1317; --surface:#141d23; --ink:#e5edf1; --muted:#93a5b0; --line:#27353e;
+  --accent:#56b9d4; --accent-soft:#143440; --on-accent:#06222b;
+  --amber:#e9a54b; --amber-soft:#3a2a12;
+  --ok:#55c98d; --ok-soft:#123424; --bad:#f17878; --bad-soft:#3d1717;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--f-body)}
+.wrap{max-width:1000px;margin:0 auto;padding-block:28px 64px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
+  display:flex;flex-direction:column;gap:36px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:clamp(1.5rem,4.2vw,2.3rem);font-weight:800;letter-spacing:-.01em}
+h2{font-size:1.25rem;font-weight:700}
+h3{font-size:1rem;font-weight:700}
+p{margin:0}
+.eyebrow{font:600 .78rem var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+.rainbow{height:5px;border-radius:3px;max-width:340px;
+  background:linear-gradient(90deg,#6a00c8,#2a3bff,#00b4e6,#17c653,#f2e014,#ff8a00,#e01515)}
+header{display:flex;flex-direction:column;gap:14px}
+.meta{display:grid;gap:10px;max-width:72ch}
+.meta b{font-weight:600}
+section{display:flex;flex-direction:column;gap:14px;min-width:0}
+.sec-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px}
+.step-tag{font:600 .75rem var(--f-mono);color:var(--on-accent);background:var(--accent);padding:2px 8px;border-radius:4px;white-space:nowrap}
+.lead{color:var(--muted);max-width:70ch}
+.prose{max-width:72ch;display:grid;gap:10px}
+
+/* formulas */
+.formula{font-family:var(--f-mono);font-size:1.02rem;display:flex;flex-wrap:wrap;align-items:center;gap:6px 22px;
+  padding:12px 16px;border-left:3px solid var(--accent);background:var(--accent-soft)}
+.formula>span{white-space:nowrap}
+.formula .arrow{color:var(--muted)}
+.fr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.15;margin:0 2px}
+.fr>span:first-child{border-bottom:1.5px solid currentColor;padding:0 4px 1px}
+.fr>span:last-child{padding:1px 4px 0}
+i.v{font-family:var(--f-mono);font-style:italic}
+
+/* steps */
+ol.steps{list-style:none;margin:0;padding:0;display:grid;gap:6px;counter-reset:s}
+ol.steps li{counter-increment:s;position:relative;padding-left:38px;min-height:26px;max-width:76ch}
+ol.steps li::before{content:counter(s);font:600 .8rem var(--f-mono);width:26px;height:26px;border-radius:50%;
+  position:absolute;left:0;top:0;display:grid;place-items:center;border:1.5px solid var(--line);color:var(--muted);background:var(--surface)}
+ol.steps li.done::before{content:"✓";background:var(--ok);border-color:var(--ok);color:var(--surface)}
+
+/* instrument windows */
+.scope{background:var(--scope);border:1px solid var(--scope-edge);border-radius:10px;overflow:hidden;color:var(--scope-ink)}
+.scope canvas{display:block;width:100%}
+#bench{height:300px}
+#view{height:220px;touch-action:pan-y;cursor:ew-resize}
+#lupe{height:128px;border-top:1px solid var(--scope-edge)}
+.scope-cap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px;padding:8px 14px;
+  font-size:.8rem;color:var(--scope-muted);border-top:1px solid var(--scope-edge)}
+.scope-cap strong{color:var(--scope-ink);font-weight:600}
+.readout{display:flex;flex-wrap:wrap;gap:6px 26px;padding:10px 14px;border-top:1px solid var(--scope-edge);
+  font-family:var(--f-mono);font-size:.92rem;font-variant-numeric:tabular-nums}
+.readout b{color:#7fe3ff;font-weight:600}
+
+.controls{display:flex;flex-wrap:wrap;gap:14px 26px;align-items:end}
+.ctl{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ctl>label,.ctl>.lab{font-size:.78rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;color:var(--ink);font:500 .95rem var(--f-body);padding:8px 14px;cursor:pointer}
+.seg button+button{border-left:1.5px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+input[type=range]{accent-color:var(--accent);width:min(260px,70vw)}
+.btn{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font:500 .95rem var(--f-body);
+  padding:8px 14px;border-radius:8px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.btn.lamp[aria-pressed="true"]{background:var(--amber-soft);border-color:var(--amber);color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible,textarea:focus-visible{outline:2.5px solid var(--accent);outline-offset:2px}
+.check{display:flex;align-items:center;gap:8px;font-size:.95rem;cursor:pointer}
+.check input{width:18px;height:18px;accent-color:var(--accent)}
+.cursor-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.cursor-row input[type=range]{flex:1 1 240px;width:auto;min-width:0}
+.val{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+/* tables */
+.tscroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:9px 10px;text-align:center;border-bottom:1px solid var(--line);border-right:1px solid var(--line);font-size:.92rem}
+tr>*:last-child{border-right:0} tbody tr:last-child>*{border-bottom:0}
+thead th{background:var(--accent);color:var(--on-accent);font-weight:600;font-size:.82rem;line-height:1.3;border-color:color-mix(in srgb,var(--on-accent) 25%,transparent)}
+tbody th{text-align:left;font-weight:600;white-space:nowrap}
+td.num{font-family:var(--f-mono)}
+#t4{min-width:760px} #terr{min-width:640px}
+.cellbtn{font:500 .9rem var(--f-mono);border:1.5px dashed var(--accent);background:transparent;color:var(--accent);
+  border-radius:6px;padding:6px 8px;cursor:pointer;min-width:104px}
+.cellbtn.set{border-style:solid;border-color:var(--line);color:var(--ink)}
+.cellbtn.ok,.lam.ok{border-color:var(--ok);background:var(--ok-soft);color:var(--ink)}
+.cellbtn.bad,.lam.bad{border-color:var(--bad);background:var(--bad-soft);color:var(--ink)}
+.lam{font:500 .9rem var(--f-mono);width:92px;padding:6px 8px;border:1.5px solid var(--line);border-radius:6px;
+  background:var(--surface);color:var(--ink);text-align:center}
+.sub{display:block;font:400 .72rem var(--f-mono);color:var(--muted);min-height:1.1em;margin-top:3px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:baseline}
+.dot.r{background:#e02222}.dot.v{background:#7a2be0}
+.row-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.msg{min-height:1.5em;font-size:.95rem;color:var(--muted)}
+.msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
+.small{font-size:.86rem;color:var(--muted);max-width:76ch}
+.errin{display:flex;flex-wrap:wrap;gap:12px 26px;align-items:end}
+.errin input{font:500 .95rem var(--f-mono);width:90px;padding:7px 8px;border:1.5px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)}
+.result{display:grid;gap:8px;padding:14px 16px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);max-width:76ch}
+.result .big{font:600 1.05rem var(--f-mono)}
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);max-width:76ch}
+details>summary{cursor:pointer;padding:10px 14px;font-weight:600}
+details>div{padding:0 14px 14px;display:grid;gap:8px}
+textarea{width:100%;max-width:76ch;min-height:110px;font:400 1rem/1.5 var(--f-body);padding:10px 12px;border:1.5px solid var(--line);
+  border-radius:8px;background:var(--surface);color:var(--ink);resize:vertical}
+.questions{border-top:4px solid var(--amber);background:var(--amber-soft);padding:16px;border-radius:0 0 10px 10px;gap:12px}
+.questions h2{color:var(--amber)}
+.questions ol{margin:0;padding-left:22px;display:grid;gap:12px;max-width:76ch}
+.questions details{background:var(--surface);margin-top:8px}
+</style>
+
+<div class="wrap">
+<header>
+  <span class="eyebrow">Физика · № 2 зертханалық жұмыс</span>
+  <h1>Дифракциялық тордың көмегімен жарықтың толқын ұзындығын анықтау</h1>
+  <div class="rainbow" aria-hidden="true"></div>
+  <div class="meta">
+    <p><b>Жұмыстың мақсаты:</b> дифракциялық тордың көмегімен жарық толқынының ұзындығын анықтау.</p>
+    <p><b>Қажетті құрал-жабдықтар:</b> периоды 1/100 мм немесе 1/50 мм дифракциялық тор, штатив, дифракциялық торды бекіткіш және өлшеуіш сызғышы бар үстел, жарық көзі, миллиметрлік шкаласы бар жіңішке вертикаль саңылаулы қара экран.</p>
+    <p><b>Тапсырма:</b> қызыл жарықтың максимал толқын ұзындығын және күлгін жарықтың минимал толқын ұзындығын анықтау.</p>
+  </div>
+</header>
+
+<section aria-labelledby="h-theory">
+  <h2 id="h-theory">Қысқаша теория</h2>
+  <div class="prose">
+    <p>Жарықтың <i class="v">λ</i> толқын ұзындығын дифракциялық тордың максимум шартынан анықтаймыз: <i class="v">d</i>·sin <i class="v">φ</i> = <i class="v">k</i>·<i class="v">λ</i>. Мұндағы <i class="v">d</i> – тор периоды, <i class="v">k</i> – спектр реті, <i class="v">φ</i> – сәйкес түс жарығының максимумы бақыланатын бұрыш.</p>
+    <p>Бірінші және екінші ретті максимумдар бақыланатын бұрыштар аз, сондықтан бұрыштардың синустарын тангенстерге алмастыруға болады. <i class="v">a</i> – дифракциялық тордан экранға дейінгі қашықтық (сызғышпен өлшенеді), <i class="v">b</i> – саңылаудан таңдалған спектр сызығына дейінгі қашықтық (экран шкаласымен өлшенеді).</p>
+  </div>
+  <div class="formula" role="math" aria-label="лямбда тең d синус фи бөлінген k; тангенс фи тең b бөлінген a; лямбда тең d b бөлінген k a">
+    <span>λ = <span class="fr"><span>d·sin φ</span><span>k</span></span></span>
+    <span>tg φ = <span class="fr"><span>b</span><span>a</span></span></span>
+    <span class="arrow">⟹</span>
+    <span><b>λ = <span class="fr"><span>d·b</span><span>k·a</span></span></b></span>
+  </div>
+</section>
+
+<section aria-labelledby="h-steps">
+  <h2 id="h-steps">Жұмыстың орындалу реті</h2>
+  <ol class="steps" id="steps">
+    <li>Қондырғыны жинаңдар: дифракциялық торды бекіткішке орнатып, экранды тордан 50 см қашықтыққа қойыңдар.</li>
+    <li>Жарық көзін қосыңдар. Жарық сәулелері экран саңылауы арқылы дифракциялық торға түсуі керек.</li>
+    <li>Тор арқылы саңылауға қарап, оның екі жағындағы дифракциялық спектрлерді бақылаңдар.</li>
+    <li>Саңылаудан бірінші және екінші ретті спектрлердің қызыл және күлгін шеттеріне дейінгі <i class="v">b</i> қашықтығын өлшеп, 4-кестеге енгізіңдер.</li>
+    <li>Қызыл түсті жарық толқынының максимал ұзындығын анықтап, 4-кестеге енгізіңдер.</li>
+    <li>Күлгін түсті жарық толқынының минимал ұзындығын анықтаңдар.</li>
+    <li>1- және 2-ретті спектрлер үшін өлшеудің салыстырмалы қателігін анықтаңдар.</li>
+    <li>Абсолют қателіктерді есептеңдер.</li>
+    <li>Алынған нәтижелерді салыстырыңдар: қай өлшеуде қателік аз?</li>
+    <li>Толқын ұзындықтарының мәнін қателікті ескеріп жазыңдар.</li>
+    <li>Орындалған жұмыс бойынша қорытынды жасаңдар.</li>
+  </ol>
+</section>
+
+<section aria-labelledby="h-bench">
+  <div class="sec-head"><span class="step-tag">1–3-қадам</span><h2 id="h-bench">Қондырғы</h2></div>
+  <p class="lead">Жоғарыдан қарағандағы көрініс. Шамның жарығы экрандағы саңылаудан өтіп, торға түседі. Көз тор арқылы саңылауға қарағанда, түрлі түсті сәулелер әртүрлі <i class="v">φ</i> бұрышқа ауытқитындықтан, спектрлер экран шкаласының бойында көрінеді.</p>
+  <div class="controls">
+    <div class="ctl"><span class="lab">Тор периоды d</span>
+      <div class="seg" role="group" aria-label="Тор периоды">
+        <button type="button" id="d100" aria-pressed="true">1/100 мм</button>
+        <button type="button" id="d50" aria-pressed="false">1/50 мм</button>
+      </div>
+    </div>
+    <div class="ctl"><label for="aRange">Тордан экранға дейін: a = <span class="val" id="aVal">50</span> см</label>
+      <input type="range" id="aRange" min="30" max="60" step="1" value="50">
+    </div>
+    <button type="button" class="btn lamp" id="lampBtn" aria-pressed="true">💡 Шам қосулы</button>
+  </div>
+  <div class="scope">
+    <canvas id="bench" role="img" aria-label="Қондырғының сұлбасы: жарық көзі, саңылауы бар экран, дифракциялық тор және бақылаушының көзі"></canvas>
+    <div class="scope-cap"><span><strong>4-сурет.</strong> Толқын ұзындығын анықтауға арналған қондырғы (сұлба)</span><span>Ақ үзік сызық – маркерге қарай бағыт</span></div>
+  </div>
+</section>
+
+<section aria-labelledby="h-view">
+  <div class="sec-head"><span class="step-tag">4-қадам</span><h2 id="h-view">Тор арқылы бақылау және өлшеу</h2></div>
+  <p class="lead">Маркерді спектрдің шетіне апарыңдар (суретте сүйреу, жүгірткі немесе ± батырмалары), үлкейткіш терезеден шкаланы оқып, төмендегі кестенің тиісті ұяшығын басыңдар. Шкаланың бір бөлігі – 1 мм.</p>
+  <div class="scope">
+    <canvas id="view" role="img" aria-label="Дифракциялық тор арқылы көрінетін экран: ортада жарық саңылау, екі жағында спектрлер, астында сантиметрлік шкала"></canvas>
+    <canvas id="lupe" role="img" aria-label="Маркер маңындағы үлкейтілген шкала"></canvas>
+    <div class="readout" aria-live="polite">
+      <span>b = <b id="roB">3,80 см</b></span>
+      <span>жағы: <b id="roSide">оң</b></span>
+      <span>φ = <b id="roPhi">4,35°</b></span>
+      <span>tg φ = <b id="roTan">0,0760</b></span>
+      <span>sin φ = <b id="roSin">0,0758</b></span>
+    </div>
+    <div class="scope-cap"><span><strong>5-сурет.</strong> Дифракциялық спектрлер және үлкейткіш (лупа)</span></div>
+  </div>
+  <div class="cursor-row">
+    <button type="button" class="btn" id="nudgeL" aria-label="Маркерді 0,5 мм солға">◀ 0,5 мм</button>
+    <input type="range" id="curRange" min="-120" max="120" step="0.5" value="38" aria-label="Маркердің орны, мм">
+    <button type="button" class="btn" id="nudgeR" aria-label="Маркерді 0,5 мм оңға">0,5 мм ▶</button>
+    <label class="check"><input type="checkbox" id="lanes"> Реттерді бөлек жолақтарда көрсету</label>
+  </div>
+
+  <h3>4-кесте</h3>
+  <div class="tscroll">
+    <table id="t4">
+      <thead>
+        <tr>
+          <th rowspan="2">Спектр реті</th>
+          <th rowspan="2">Тордың периоды<br>d, м</th>
+          <th rowspan="2">Тордан экранға дейінгі қашықтық<br>a, м</th>
+          <th colspan="2">Саңылаудан жарықтандыру максимумы шекарасына дейінгі қашықтық b, м</th>
+          <th colspan="2">Толқын ұзындығы λ, нм</th>
+        </tr>
+        <tr>
+          <th>қызыл түсті жарықтың</th><th>күлгін түсті жарықтың</th>
+          <th>қызыл түсті жарықтың, λ<sub>max</sub></th><th>күлгін түсті жарықтың, λ<sub>min</sub></th>
+        </tr>
+      </thead>
+      <tbody id="t4body"></tbody>
+    </table>
+  </div>
+  <p class="small">b ұяшығын басқанда маркердің қазіргі көрсетуі жазылады. λ мәнін <span class="val">λ = d·b/(k·a)</span> формуласымен өздерің есептеп, нанометрмен енгізіңдер (1 нм = 10<sup>−9</sup> м).</p>
+  <div class="row-actions">
+    <button type="button" class="btn primary" id="checkBtn">Тексеру</button>
+    <button type="button" class="btn" id="fillBtn">λ мәндерін формуламен есептеп беру</button>
+    <button type="button" class="btn" id="clearBtn">Кестені тазалау</button>
+  </div>
+  <p class="msg" id="msg" role="status" aria-live="polite"></p>
+</section>
+
+<section aria-labelledby="h-err">
+  <div class="sec-head"><span class="step-tag">7–10-қадам</span><h2 id="h-err">Қателіктерді бағалау</h2></div>
+  <div class="formula" role="math" aria-label="эпсилон тең дельта b бөлінген b қосу дельта a бөлінген a; дельта лямбда тең лямбда көбейтілген эпсилон">
+    <span>ε<sub>λ</sub> = <span class="fr"><span>Δb</span><span>b</span></span> + <span class="fr"><span>Δa</span><span>a</span></span></span>
+    <span>Δλ = λ·ε<sub>λ</sub></span>
+  </div>
+  <p class="small">Мұндағы Δb және Δa – <i class="v">b</i> және <i class="v">a</i> кесінділерін өлшеудің абсолют қателіктері; әрқайсысы санақ қателігі мен аспаптық қателіктің қосындысы. Бөлік құны 1 мм шкала үшін санақ қателігі 0,5 мм, аспаптық қателік шамамен 0,5 мм деп алынды. Қажет болса, мәндерді өзгертіңдер.</p>
+  <div class="errin">
+    <div class="ctl"><label for="db">Δb, мм</label><input id="db" type="text" inputmode="decimal" value="1"></div>
+    <div class="ctl"><label for="da">Δa, мм</label><input id="da" type="text" inputmode="decimal" value="1"></div>
+  </div>
+  <div class="tscroll">
+    <table id="terr">
+      <thead><tr><th>Спектр</th><th>Түс</th><th>b, мм</th><th>λ, нм</th><th>ε<sub>λ</sub>, %</th><th>Δλ, нм</th><th>λ ± Δλ, нм</th></tr></thead>
+      <tbody id="errBody"></tbody>
+    </table>
+  </div>
+  <div class="result" id="resultBox"></div>
+  <details id="cmp">
+    <summary>9-қадамның жауабын көру: қай өлшеуде қателік аз?</summary>
+    <div><p>Екінші ретті спектрде қателік аз. Δb мен Δa өзгермейді, ал <i class="v">b</i> қашықтығы шамамен екі есе артады, сондықтан Δb/b үлесі, демек ε<sub>λ</sub> де кемиді. Сол себепті күлгін шетке қарағанда (b кіші) қызыл шетті өлшеудің салыстырмалы қателігі аз.</p>
+    <p id="cmpNums" class="small"></p></div>
+  </details>
+</section>
+
+<section aria-labelledby="h-concl">
+  <div class="sec-head"><span class="step-tag">11-қадам</span><h2 id="h-concl">Қорытынды</h2></div>
+  <label for="concl" class="lead">Жұмыс бойынша өз қорытындыңды жаз:</label>
+  <textarea id="concl" placeholder="Мысалы: дифракциялық тордың көмегімен … анықтадым; алынған мәндер …"></textarea>
+  <details>
+    <summary>Үлгі қорытындыны көру</summary>
+    <div><p id="sample"></p></div>
+  </details>
+</section>
+
+<section class="questions" aria-labelledby="h-q">
+  <h2 id="h-q">Бақылау сұрақтары</h2>
+  <ol>
+    <li>Неліктен күлгін түстің сәулелеріне қарағанда қызыл түстің сәулелері жарықтандырудың центрлік максимумынан алысырақ орналасады?
+      <details><summary>Жауабы</summary><div><p>Тордың максимум шарты: d·sin φ = k·λ. Спектрдің бір реті үшін толқын ұзындығы неғұрлым үлкен болса, sin φ, демек φ бұрышы да соғұрлым үлкен. Қызыл жарықтың толқын ұзындығы (≈ 760 нм) күлгін жарықтікінен (≈ 380 нм) шамамен екі есе үлкен, сондықтан қызыл сәулелер центрлік максимумнан алысырақ ауытқиды.</p></div></details>
+    </li>
+    <li>Неліктен спектр ретін арттырғанда спектр шекаралары байқалмайды?
+      <details><summary>Жауабы</summary><div><p>Спектрдің ені ретке пропорционал өседі, сондықтан жоғары ретті спектрлер бірінің үстіне бірі түседі. Мысалы, 3-ретті спектрдің күлгін шеті (3·380 нм = 1140 нм) 2-ретті спектрдің қызыл шетінен (2·760 нм = 1520 нм) ертерек басталады: түстер араласып, шекара анық көрінбейді. Оған қоса рет артқан сайын максимумдардың жарықтылығы кемиді.</p><p class="small">Мұны жоғарыдағы «Реттерді бөлек жолақтарда көрсету» белгісін қойып тексеруге болады.</p></div></details>
+    </li>
+  </ol>
+</section>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const HALF=120;                       // шкаланың жарты ұзындығы, мм
+const RED=760, VIO=380;               // көрінетін спектр шекаралары, нм
+const S={d:0.01,a:50,lamp:true,power:1,cur:38,lanes:false};
+const ROWS=[{side:-1,k:1,name:'Сол жақтағы 1'},{side:1,k:1,name:'Оң жақтағы 1'},
+            {side:-1,k:2,name:'Сол жақтағы 2'},{side:1,k:2,name:'Оң жақтағы 2'}].map(r=>Object.assign(r,{bR:null,bV:null}));
+
+/* ---------- физика ---------- */
+// дәл орын: d·sinφ = kλ, b = a·tgφ  (мм)
+function bTrue(nm,k){const s=k*nm*1e-6/S.d; return s>=1?Infinity:S.a*10*Math.tan(Math.asin(s));}
+// экрандағы x (мм) нүктесінде k-ретте көрінетін толқын ұзындығы (нм)
+function lamAt(x,k){const a=S.a*10; return S.d*(x/Math.hypot(x,a))/k*1e6;}
+// оқулық формуласы: λ = d·b/(k·a)  (нм)
+function lamFormula(b,k){return S.d*b/(k*S.a*10)*1e6;}
+function wl2rgb(w){
+  let r=0,g=0,b=0;
+  if(w<380||w>760) return [0,0,0];
+  if(w<440){r=(440-w)/60;b=1}
+  else if(w<490){g=(w-440)/50;b=1}
+  else if(w<510){g=1;b=(510-w)/20}
+  else if(w<580){r=(w-510)/70;g=1}
+  else if(w<645){r=1;g=(645-w)/65}
+  else r=1;
+  let f=1; if(w<420) f=.45+.55*(w-380)/40; else if(w>700) f=.45+.55*(760-w)/60;
+  return [Math.pow(r*f,.8),Math.pow(g*f,.8),Math.pow(b*f,.8)];
+}
+const WK=[0,1,.62,.38];
+function colorAt(mm,only){
+  let r=0,g=0,b=0; const ax=Math.abs(mm);
+  for(let k=1;k<=3;k++){ if(only&&only!==k) continue;
+    const c=wl2rgb(lamAt(ax,k)), w=only?1:WK[k]; r+=c[0]*w; g+=c[1]*w; b+=c[2]*w; }
+  return [Math.min(1,r),Math.min(1,g),Math.min(1,b)];
+}
+
+/* ---------- көмекші ---------- */
+const fmt=(x,n)=>x.toFixed(n).replace('.',',');
+const num=v=>{const x=parseFloat(String(v).replace(',','.').replace(/\s/g,'')); return isFinite(x)?x:NaN;};
+function fit(c){
+  const r=c.getBoundingClientRect(), dpr=Math.min(window.devicePixelRatio||1,2);
+  const w=Math.max(1,Math.round(r.width*dpr)), h=Math.max(1,Math.round(r.height*dpr));
+  if(c.width!==w||c.height!==h){c.width=w;c.height=h;}
+  const ctx=c.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {W:r.width,H:r.height,dpr,ctx};
+}
+const off=document.createElement('canvas'); off.height=1;
+function strip(ctx,x,y,w,h,mm0,mm1,dpr,alpha,only){
+  const n=Math.max(2,Math.round(w*dpr)); off.width=n;
+  const o=off.getContext('2d'), im=o.createImageData(n,1), d=im.data;
+  for(let i=0;i<n;i++){const c=colorAt(mm0+(i+.5)/n*(mm1-mm0),only);
+    d[i*4]=c[0]*255; d[i*4+1]=c[1]*255; d[i*4+2]=c[2]*255; d[i*4+3]=255;}
+  o.putImageData(im,0,0);
+  ctx.save(); ctx.globalAlpha=alpha; ctx.drawImage(off,x,y,w,h); ctx.restore();
+}
+const FONT=(px,w)=>(w||500)+' '+px+'px "Golos Text","Segoe UI",Arial,sans-serif';
+const MONO=(px,w)=>(w||400)+' '+px+'px "JetBrains Mono",Consolas,monospace';
+
+/* ---------- 1) қондырғы (жоғарыдан көрініс) ---------- */
+function drawBench(t){
+  const {W,H,ctx}=fit($('bench'));
+  ctx.clearRect(0,0,W,H); ctx.fillStyle='#04080b'; ctx.fillRect(0,0,W,H);
+  const narrow=W<560;
+  const xg=narrow?46:96, xsMax=W-(narrow?58:120), sx=(xsMax-xg)/60;
+  const xs=xg+S.a*sx, xl=W-(narrow?20:44), cy=H/2-14, sy=(cy-22)/12.5;
+  const Y=mm=>cy+mm/10*sy, p=S.power;
+
+  // сызғыш (үстел)
+  const ry=H-30;
+  ctx.strokeStyle='#4a5c68'; ctx.fillStyle='#8aa0ad'; ctx.lineWidth=1; ctx.font=MONO(10);
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.beginPath(); ctx.moveTo(xg,ry); ctx.lineTo(xsMax,ry); ctx.stroke();
+  for(let c=0;c<=60;c+=5){const x=xg+c*sx; ctx.beginPath(); ctx.moveTo(x,ry); ctx.lineTo(x,ry-(c%10?4:8)); ctx.stroke();
+    if(c%10===0&&(!narrow||c%20===0)) ctx.fillText(c,x,ry+3);}
+  ctx.fillText('см',xsMax+(narrow?16:22),ry+3);
+  // a өлшемі
+  ctx.strokeStyle='#7fe3ff'; ctx.fillStyle='#7fe3ff'; ctx.lineWidth=1.5;
+  const ay=ry-16; ctx.beginPath(); ctx.moveTo(xg,ay); ctx.lineTo(xs,ay); ctx.stroke();
+  [[xg,1],[xs,-1]].forEach(([x,s])=>{ctx.beginPath();ctx.moveTo(x,ay);ctx.lineTo(x+6*s,ay-3.5);ctx.lineTo(x+6*s,ay+3.5);ctx.closePath();ctx.fill();});
+  ctx.font=MONO(12,600); ctx.textBaseline='bottom'; ctx.fillText('a = '+S.a+' см',(xg+xs)/2,ay-3);
+
+  // спектр желпуіштері: көзге әр түс көрінетін бағыттар
+  if(p>.01){
+    const N=30;
+    for(const side of [-1,1]) for(let k=3;k>=1;k--){
+      for(let i=0;i<N;i++){
+        const l0=VIO+(RED-VIO)*i/N, l1=VIO+(RED-VIO)*(i+1)/N;
+        const b0=Math.min(bTrue(l0,k),128), b1=Math.min(bTrue(l1,k),128); if(b0>=128) break;
+        const c=wl2rgb((l0+l1)/2);
+        ctx.fillStyle='rgba('+(c[0]*255|0)+','+(c[1]*255|0)+','+(c[2]*255|0)+','+(.34*WK[k]*p)+')';
+        ctx.beginPath(); ctx.moveTo(xg,cy); ctx.lineTo(xs,Y(side*b0)); ctx.lineTo(xs,Y(side*b1)); ctx.closePath(); ctx.fill();
+      }
+    }
+  }
+  // шамнан саңылауға және торға жарық
+  if(p>.01){
+    const g=ctx.createLinearGradient(xl,0,xs,0); g.addColorStop(0,'rgba(255,240,190,'+.30*p+')'); g.addColorStop(1,'rgba(255,240,190,'+.07*p+')');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(xl,cy); ctx.lineTo(xs+3,Y(-60)); ctx.lineTo(xs+3,Y(60)); ctx.closePath(); ctx.fill();
+    ctx.save(); ctx.strokeStyle='rgba(255,250,230,'+.95*p+')'; ctx.lineWidth=2; ctx.shadowColor='#fff4c4'; ctx.shadowBlur=8;
+    ctx.setLineDash([12,9]); ctx.lineDashOffset=reduce?0:t*.06;
+    ctx.beginPath(); ctx.moveTo(xl,cy); ctx.lineTo(xg-(narrow?16:30),cy); ctx.stroke(); ctx.restore();
+  }
+  // экран + оның бетіндегі спектр
+  const yT=Y(-125), yB=Y(125);
+  if(p>.01){ for(let y=Math.ceil(yT);y<yB;y++){const mm=(y-cy)/sy*10; if(Math.abs(mm)<1.5) continue; const c=colorAt(mm,0);
+      if(c[0]+c[1]+c[2]<.02) continue;
+      ctx.fillStyle='rgba('+(c[0]*255|0)+','+(c[1]*255|0)+','+(c[2]*255|0)+','+p+')'; ctx.fillRect(xs-7,y,6,1.2);} }
+  ctx.fillStyle='#c9d4da'; ctx.fillRect(xs-1,yT,4,cy-3-yT); ctx.fillRect(xs-1,cy+3,4,yB-cy-3);
+  ctx.strokeStyle='#c9d4da'; ctx.lineWidth=1;
+  for(let c=-12;c<=12;c++){ if(!c) continue; ctx.beginPath(); ctx.moveTo(xs+3,Y(c*10)); ctx.lineTo(xs+(c%5?6:9),Y(c*10)); ctx.stroke(); }
+
+  // маркерге қарай бағыт, φ бұрышы және b
+  { const yc=Y(S.cur); ctx.save(); ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=1.2; ctx.setLineDash([5,4]);
+    ctx.beginPath(); ctx.moveTo(xg,cy); ctx.lineTo(xs,yc); ctx.stroke(); ctx.restore();
+    if(Math.abs(S.cur)>=2){
+      const ang=Math.atan2(yc-cy,xs-xg), R=Math.min(110,(xs-xg)*.3);
+      ctx.strokeStyle='#ffd166'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(xg,cy,R,Math.min(0,ang),Math.max(0,ang)); ctx.stroke();
+      ctx.fillStyle='#ffd166'; ctx.font=MONO(13,600); ctx.textAlign='left'; ctx.textBaseline='middle';
+      ctx.fillText('φ',xg+R+5,cy+Math.tan(ang/2)*(R+5));
+      ctx.strokeStyle='#7fe3ff'; ctx.fillStyle='#7fe3ff'; ctx.lineWidth=1.5; const bx=xs+(narrow?12:16);
+      ctx.beginPath(); ctx.moveTo(bx,cy); ctx.lineTo(bx,yc); ctx.moveTo(bx-4,cy); ctx.lineTo(bx+4,cy); ctx.moveTo(bx-4,yc); ctx.lineTo(bx+4,yc); ctx.stroke();
+      ctx.fillText('b',bx+6,(cy+yc)/2);
+    }
+  }
+  // тор
+  ctx.fillStyle='#9fb4c0'; ctx.fillRect(xg-2,cy-24,4,48);
+  ctx.strokeStyle='#04080b'; ctx.lineWidth=1; for(let y=cy-22;y<cy+24;y+=4){ctx.beginPath();ctx.moveTo(xg-2,y);ctx.lineTo(xg+2,y);ctx.stroke();}
+  // көз
+  { const ex=xg-(narrow?22:40); ctx.strokeStyle='#dbe6eb'; ctx.lineWidth=1.6; ctx.fillStyle='#0b1418';
+    ctx.beginPath(); ctx.moveTo(ex-14,cy); ctx.quadraticCurveTo(ex,cy-13,ex+14,cy); ctx.quadraticCurveTo(ex,cy+13,ex-14,cy); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#56b9d4'; ctx.beginPath(); ctx.arc(ex+4,cy,5,0,7); ctx.fill(); ctx.fillStyle='#04080b'; ctx.beginPath(); ctx.arc(ex+5,cy,2.2,0,7); ctx.fill(); }
+  // шам
+  { const fl=reduce?1:.9+.1*Math.sin(t*.004);
+    if(p>.01){const g=ctx.createRadialGradient(xl,cy,2,xl,cy,34*fl); g.addColorStop(0,'rgba(255,236,170,'+.9*p+')'); g.addColorStop(1,'rgba(255,236,170,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(xl,cy,34*fl,0,7); ctx.fill();}
+    ctx.fillStyle=p>.5?'#fff3c9':'#39464e'; ctx.strokeStyle='#9fb4c0'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(xl,cy,9,0,7); ctx.fill(); ctx.stroke(); }
+  // жазулар
+  ctx.fillStyle='#dbe6eb'; ctx.font=FONT(narrow?11:12.5); ctx.textBaseline='alphabetic';
+  ctx.textAlign='left'; ctx.fillText(narrow?'Тор':'Дифракциялық тор',xg-(narrow?14:40),18);
+  ctx.textAlign='right'; ctx.fillText(narrow?'Экран':'Саңылауы бар экран',Math.min(xs+40,W-70),18);
+  ctx.fillText(narrow?'Шам':'Жарық көзі',W-6,cy-(narrow?40:42));
+  ctx.textAlign='center'; ctx.fillStyle='#8aa0ad'; ctx.font=FONT(11);
+  ctx.fillText('көз',xg-(narrow?22:40),cy+28);
+  if(p>.01&&!narrow){ ctx.font=MONO(11);
+    for(let k=1;k<=2;k++){const bm=(bTrue(VIO,k)+bTrue(RED,k))/2; if(bm<118){ctx.textAlign='right';
+      ctx.fillText('k='+k,xs-12,Y(-bm)+4); ctx.fillText('k='+k,xs-12,Y(bm)+4);}}}
+}
+
+/* ---------- 2) тор арқылы көрініс ---------- */
+let viewGeo={ppm:1,W:1};
+function drawView(t){
+  const {W,H,dpr,ctx}=fit($('view'));
+  const ppm=W/(2*HALF+10), X=mm=>W/2+mm*ppm, top=26, sH=56, bandH=H-top-sH, sTop=top+bandH, p=S.power;
+  viewGeo={ppm,W};
+  ctx.fillStyle='#04080b'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#000'; ctx.fillRect(0,top,W,bandH);
+  if(p>.01){
+    if(S.lanes){ const lh=bandH/3;
+      for(let k=1;k<=3;k++) strip(ctx,0,top+(k-1)*lh+3,W,lh-6,-HALF-5,HALF+5,dpr,p,k);
+    } else {
+      strip(ctx,0,top,W,bandH,-HALF-5,HALF+5,dpr,p,0);
+      const g=ctx.createLinearGradient(0,top,0,sTop); g.addColorStop(0,'rgba(0,0,0,.85)'); g.addColorStop(.18,'rgba(0,0,0,0)');
+      g.addColorStop(.82,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,.85)'); ctx.fillStyle=g; ctx.fillRect(0,top,W,bandH);
+    }
+  }
+  // саңылау
+  const sw=Math.max(3,ppm), fl=reduce?1:.88+.12*Math.sin(t*.005);
+  ctx.save();
+  if(p>.01){ctx.shadowColor='#fff3c4'; ctx.shadowBlur=22*fl*p; ctx.fillStyle='rgba(255,251,232,'+p+')';}
+  else ctx.fillStyle='#232d33';
+  ctx.fillRect(W/2-sw/2,top+5,sw,bandH-10); ctx.restore();
+  // рет белгілері
+  ctx.fillStyle='#8aa0ad'; ctx.font=MONO(11); ctx.textBaseline='middle';
+  if(S.lanes){ ctx.textAlign='left'; const lh=bandH/3; ctx.fillStyle='#dbe6eb';
+    for(let k=1;k<=3;k++) ctx.fillText('k = '+k,6,top+(k-.5)*lh);
+    ctx.fillStyle='#8aa0ad'; ctx.textAlign='center'; ctx.fillText('әр рет жеке көрсетілген',W/2,13);
+  } else if(p>.01){ ctx.textAlign='center';
+    for(const side of [-1,1]) for(let k=1;k<=3;k++){ const bv=bTrue(VIO,k); if(bv>HALF-6) continue;
+      const bm=(bv+Math.min(bTrue(RED,k),HALF))/2; ctx.fillText(W<560?String(k):'k = '+k,X(side*bm),13); }
+    if(W<560){ctx.textAlign='left'; ctx.fillText('k:',4,13);}
+  }
+  // шкала
+  ctx.fillStyle='#ebe6d5'; ctx.fillRect(0,sTop,W,sH);
+  ctx.strokeStyle='#20262a'; ctx.fillStyle='#20262a'; ctx.lineWidth=1; ctx.font=MONO(11,600); ctx.textAlign='center'; ctx.textBaseline='top';
+  for(let mm=-HALF;mm<=HALF;mm++){
+    const cm=mm%10===0, five=mm%5===0; if(!five&&ppm<2.2) continue;
+    const x=Math.round(X(mm))+.5; ctx.beginPath(); ctx.moveTo(x,sTop); ctx.lineTo(x,sTop+(cm?17:five?11:6)); ctx.stroke();
+    if(cm&&mm!==0){const n=Math.abs(mm/10); if(ppm*10>=20||n%2===0) ctx.fillText(n,X(mm),sTop+21);}
+  }
+  ctx.font=MONO(10); ctx.fillText('0',W/2,sTop+21); ctx.textAlign='right'; ctx.fillText('см',W-4,sTop+39);
+  // маркер
+  const cx=X(S.cur); ctx.strokeStyle='#7fe3ff'; ctx.fillStyle='#7fe3ff'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(cx,top-4); ctx.lineTo(cx,sTop+sH-12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,top+2); ctx.lineTo(cx-7,top-9); ctx.lineTo(cx+7,top-9); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx,sTop+sH-9,6,0,7); ctx.fill();
+}
+
+/* ---------- 3) лупа ---------- */
+function drawLupe(){
+  const {W,H,dpr,ctx}=fit($('lupe'));
+  const half=Math.max(8,Math.min(22,W/44)), ppm=W/(2*half), X=mm=>W/2+(mm-S.cur)*ppm, sH=50, bandH=H-sH, p=S.power;
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
+  if(p>.01){
+    if(S.lanes){const lh=bandH/3; for(let k=1;k<=3;k++) strip(ctx,0,(k-1)*lh+2,W,lh-4,S.cur-half,S.cur+half,dpr,p,k);}
+    else strip(ctx,0,0,W,bandH,S.cur-half,S.cur+half,dpr,p,0);
+  }
+  if(Math.abs(S.cur)<half+1){ ctx.fillStyle=p>.01?'rgba(255,251,232,'+p+')':'#232d33'; ctx.fillRect(X(-.5),3,ppm,bandH-6); }
+  ctx.fillStyle='#ebe6d5'; ctx.fillRect(0,bandH,W,sH);
+  ctx.strokeStyle='#20262a'; ctx.fillStyle='#20262a'; ctx.lineWidth=1; ctx.textAlign='center'; ctx.textBaseline='top';
+  const m0=Math.ceil((S.cur-half)*2)/2, m1=Math.min(HALF,S.cur+half);
+  for(let mm=Math.max(-HALF,m0);mm<=m1;mm+=.5){
+    const whole=Number.isInteger(mm), cm=whole&&mm%10===0, five=whole&&mm%5===0;
+    const x=Math.round(X(mm))+.5; ctx.lineWidth=cm?1.6:1;
+    ctx.beginPath(); ctx.moveTo(x,bandH); ctx.lineTo(x,bandH+(cm?20:five?15:whole?10:5)); ctx.stroke();
+    if(five){ ctx.font=MONO(cm?13:11,cm?600:400); ctx.fillText(cm?String(Math.abs(mm/10)):fmt(Math.abs(mm)/10,1),X(mm),bandH+24); }
+  }
+  ctx.strokeStyle='#e0245e'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(W/2,0); ctx.lineTo(W/2,H-22); ctx.stroke();
+  ctx.fillStyle='rgba(4,8,11,.7)'; ctx.fillRect(6,6,62,20); ctx.fillStyle='#dbe6eb'; ctx.font=FONT(11); ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.fillText('лупа, см',12,16);
+}
+
+/* ---------- кесте ---------- */
+const dText=()=>S.d===0.01?'1·10⁻⁵':'2·10⁻⁵';
+function buildTable(){
+  $('t4body').innerHTML=ROWS.map((r,i)=>
+    '<tr><th scope="row">'+r.name+'</th><td class="num" data-d></td><td class="num" data-a></td>'+
+    '<td><button type="button" class="cellbtn" id="b-R-'+i+'" aria-label="'+r.name+': қызыл шетке дейінгі b мәнін жазу"></button></td>'+
+    '<td><button type="button" class="cellbtn" id="b-V-'+i+'" aria-label="'+r.name+': күлгін шетке дейінгі b мәнін жазу"></button></td>'+
+    '<td><input class="lam" id="l-R-'+i+'" type="text" inputmode="decimal" placeholder="нм" aria-label="'+r.name+': қызыл жарықтың толқын ұзындығы, нм"><span class="sub" id="s-R-'+i+'"></span></td>'+
+    '<td><input class="lam" id="l-V-'+i+'" type="text" inputmode="decimal" placeholder="нм" aria-label="'+r.name+': күлгін жарықтың толқын ұзындығы, нм"><span class="sub" id="s-V-'+i+'"></span></td></tr>').join('');
+  ROWS.forEach((r,i)=>['R','V'].forEach(c=>{
+    $('b-'+c+'-'+i).addEventListener('click',()=>record(i,c));
+    $('l-'+c+'-'+i).addEventListener('input',()=>{$('l-'+c+'-'+i).classList.remove('ok','bad'); subLam(i,c); refreshSteps();});
+  }));
+}
+function subLam(i,c){const v=num($('l-'+c+'-'+i).value); $('s-'+c+'-'+i).textContent=isFinite(v)&&v>0?fmt(v/100,2)+'·10⁻⁷ м':'';}
+function refreshTable(){
+  document.querySelectorAll('#t4body [data-d]').forEach(e=>e.textContent=dText());
+  document.querySelectorAll('#t4body [data-a]').forEach(e=>e.textContent=fmt(S.a/100,2));
+  ROWS.forEach((r,i)=>['R','V'].forEach(c=>{const b=r['b'+c], el=$('b-'+c+'-'+i);
+    el.innerHTML=b==null?'<span class="dot '+(c==='R'?'r':'v')+'"></span>жазу':fmt(b/1000,4);
+    el.classList.toggle('set',b!=null); if(b==null) el.classList.remove('ok','bad');}));
+  refreshErrors(); refreshSteps();
+}
+function say(text,cls){const m=$('msg'); m.textContent=text; m.className='msg'+(cls?' '+cls:'');}
+function record(i,c){
+  const r=ROWS[i];
+  if(!S.lamp){say('Алдымен шамды қосыңдар – спектр көрінбей тұр.','bad');return;}
+  if(S.cur===0||Math.sign(S.cur)!==r.side){say('«'+r.name+'» жолы үшін маркер саңылаудың '+(r.side<0?'сол':'оң')+' жағында тұруы керек.','bad');return;}
+  r['b'+c]=Math.abs(S.cur); $('b-'+c+'-'+i).classList.remove('ok','bad');
+  say(r.name+', '+(c==='R'?'қызыл':'күлгін')+' шет: b = '+fmt(Math.abs(S.cur),1)+' мм = '+fmt(Math.abs(S.cur)/1000,4)+' м жазылды.');
+  refreshTable();
+}
+function lamOK(i,c){const r=ROWS[i], b=r['b'+c], v=num($('l-'+c+'-'+i).value); if(b==null||!isFinite(v)) return false;
+  const f=lamFormula(b,r.k); return Math.abs(v-f)<=Math.max(2,f*.01);}
+function check(){
+  let okB=0,nB=0,okL=0,nL=0;
+  ROWS.forEach((r,i)=>['R','V'].forEach(c=>{
+    const b=r['b'+c], be=$('b-'+c+'-'+i), le=$('l-'+c+'-'+i);
+    be.classList.remove('ok','bad'); le.classList.remove('ok','bad');
+    if(b!=null){nB++; const good=Math.abs(b-bTrue(c==='R'?RED:VIO,r.k))<=1; be.classList.add(good?'ok':'bad'); if(good) okB++;}
+    if(le.value.trim()!==''){nL++; const good=lamOK(i,c); le.classList.add(good?'ok':'bad'); if(good) okL++;}
+  }));
+  if(!nB&&!nL){say('Әзірге тексеретін ештеңе жоқ: алдымен b қашықтықтарын өлшеңдер.','bad');return;}
+  const all=okB===8&&okL===8;
+  let s='b өлшеулері: '+okB+' / 8 дұрыс (жазылғаны – '+nB+'). λ есептеулері: '+okL+' / 8 дұрыс (енгізілгені – '+nL+').';
+  if(okB<nB) s+=' Қызыл белгіленген b мәндерін қайта өлшеңдер: қызыл шет – спектрдің саңылаудан ең алыс шеті, күлгін шет – ең жақын шеті.';
+  if(okL<nL) s+=' λ = d·b/(k·a) формуласына өз b мәніңді қойып, жауапты нанометрге айналдыр.';
+  if(all) s='Барлық өлшеулер мен есептеулер дұрыс. Енді қателіктерді бағалаңдар.';
+  say(s,all?'ok':(okB<nB||okL<nL)?'bad':'');
+}
+function fillLam(){
+  let n=0; ROWS.forEach((r,i)=>['R','V'].forEach(c=>{const b=r['b'+c]; if(b!=null){const e=$('l-'+c+'-'+i); e.value=String(Math.round(lamFormula(b,r.k))); e.classList.remove('ok','bad'); subLam(i,c); n++;}}));
+  say(n?'λ = d·b/(k·a) бойынша '+n+' мән есептелді. Мысалы: λ = '+dText()+' м · b / (k · '+fmt(S.a/100,2)+' м).':'Алдымен b қашықтықтарын өлшеп, кестеге жазыңдар.',n?'':'bad');
+  refreshSteps();
+}
+function clearTable(silent){
+  ROWS.forEach((r,i)=>{r.bR=r.bV=null; ['R','V'].forEach(c=>{const e=$('l-'+c+'-'+i); e.value=''; e.classList.remove('ok','bad'); subLam(i,c);});});
+  refreshTable(); if(!silent) say('Кесте тазартылды.');
+}
+function paramChanged(){
+  const had=ROWS.some(r=>r.bR!=null||r.bV!=null);
+  if(had){clearTable(true); say('Қондырғы параметрі өзгерді, сондықтан кесте тазартылды – өлшеуді қайта жүргізіңдер.');}
+  else refreshTable();
+}
+
+/* ---------- қателіктер ---------- */
+function refreshErrors(){
+  let db=num($('db').value), da=num($('da').value); if(!(db>=0)) db=1; if(!(da>=0)) da=1;
+  const rows=[], acc={R:[],V:[]}, eps={1:[],2:[]};
+  ROWS.forEach(r=>['R','V'].forEach(c=>{
+    const b=r['b'+c]; let cells='<td class="num">–</td><td class="num">–</td><td class="num">–</td><td class="num">–</td><td class="num">–</td>';
+    if(b!=null){const lam=lamFormula(b,r.k), e=db/b+da/(S.a*10), dl=lam*e; acc[c].push({lam,dl}); eps[r.k].push(e);
+      cells='<td class="num">'+fmt(b,1)+'</td><td class="num">'+Math.round(lam)+'</td><td class="num">'+fmt(e*100,1)+'</td><td class="num">'+Math.ceil(dl)+'</td><td class="num">'+Math.round(lam)+' ± '+Math.ceil(dl)+'</td>';}
+    rows.push('<tr><th scope="row">'+r.name+'</th><td><span class="dot '+(c==='R'?'r':'v')+'"></span>'+(c==='R'?'қызыл':'күлгін')+'</td>'+cells+'</tr>');
+  }));
+  $('errBody').innerHTML=rows.join('');
+  const mean=a=>a.reduce((s,x)=>s+x,0)/a.length;
+  const res=c=>{const a=acc[c]; if(!a.length) return null; return {lam:mean(a.map(x=>x.lam)),dl:mean(a.map(x=>x.dl)),n:a.length};};
+  const R=res('R'), V=res('V'), box=$('resultBox');
+  if(!R&&!V){ box.innerHTML='<p class="lead">Кестеге b қашықтықтары жазылғанда, қателіктер мен соңғы нәтиже осында есептеледі.</p>'; }
+  else{
+    const line=(x,name,sym,ref)=>x?'<p class="big"><span class="dot '+(sym==='max'?'r':'v')+'"></span>λ<sub>'+sym+'</sub> = ('+Math.round(x.lam)+' ± '+Math.ceil(x.dl)+') нм = ('+fmt(x.lam/100,2)+' ± '+fmt(Math.ceil(x.dl)/100,2)+')·10⁻⁷ м</p><p class="small">'+name+': '+x.n+' өлшеудің орташа мәні. Анықтамалық мән шамамен '+ref+' нм; айырмасы '+fmt(Math.abs(x.lam-ref)/ref*100,1)+' %.</p>':'';
+    box.innerHTML=line(R,'Қызыл жарықтың максимал толқын ұзындығы','max',RED)+line(V,'Күлгін жарықтың минимал толқын ұзындығы','min',VIO);
+  }
+  $('cmpNums').textContent=(eps[1].length&&eps[2].length)?'Сенің өлшеулеріңде: 1-ретте орташа ε = '+fmt(mean(eps[1])*100,1)+' %, 2-ретте орташа ε = '+fmt(mean(eps[2])*100,1)+' %.':'';
+  $('sample').textContent=(R&&V)?
+    'Дифракциялық тордың (d = '+dText()+' м) көмегімен, экранды тордан a = '+fmt(S.a/100,2)+' м қашықтыққа қойып, жарықтың толқын ұзындығын λ = d·b/(k·a) формуласымен анықтадым. Қызыл жарықтың максимал толқын ұзындығы λmax = ('+Math.round(R.lam)+' ± '+Math.ceil(R.dl)+') нм, күлгін жарықтың минимал толқын ұзындығы λmin = ('+Math.round(V.lam)+' ± '+Math.ceil(V.dl)+') нм болды. Бұл мәндер қателік шегінде анықтамалық мәндермен (шамамен 760 нм және 380 нм) сәйкес келеді. Екінші ретті спектрде b қашықтығы үлкен болғандықтан, салыстырмалы қателік аз. Қызыл сәулелер күлгін сәулелерге қарағанда үлкен бұрышқа ауытқиды, себебі олардың толқын ұзындығы үлкен.':
+    'Үлгі қорытынды 4-кестеге қызыл және күлгін шеттердің b қашықтықтары жазылғаннан кейін құрастырылады.';
+}
+
+/* ---------- қадамдар ---------- */
+function refreshSteps(){
+  const allB=ROWS.every(r=>r.bR!=null&&r.bV!=null);
+  const lr=ROWS.every((r,i)=>lamOK(i,'R')), lv=ROWS.every((r,i)=>lamOK(i,'V'));
+  const done=[true,S.lamp,S.lamp,allB,lr,lv,allB,allB,allB&&$('cmp').open,allB,$('concl').value.trim().length>=20];
+  [...$('steps').children].forEach((li,i)=>li.classList.toggle('done',!!done[i]));
+}
+
+/* ---------- басқару ---------- */
+function setCur(mm){
+  mm=Math.max(-HALF,Math.min(HALF,Math.round(mm*2)/2)); S.cur=mm; $('curRange').value=mm;
+  const ax=Math.abs(mm), a=S.a*10, phi=Math.atan(ax/a);
+  $('roB').textContent=fmt(ax/10,2)+' см ('+fmt(ax,1)+' мм)';
+  $('roSide').textContent=mm<0?'сол':mm>0?'оң':'саңылау';
+  $('roPhi').textContent=fmt(phi*180/Math.PI,2)+'°';
+  $('roTan').textContent=fmt(Math.tan(phi),4);
+  $('roSin').textContent=fmt(Math.sin(phi),4);
+}
+function setD(d){S.d=d; $('d100').setAttribute('aria-pressed',d===0.01); $('d50').setAttribute('aria-pressed',d===0.02); paramChanged();}
+$('d100').addEventListener('click',()=>{if(S.d!==0.01) setD(0.01);});
+$('d50').addEventListener('click',()=>{if(S.d!==0.02) setD(0.02);});
+$('aRange').addEventListener('input',e=>{S.a=+e.target.value; $('aVal').textContent=S.a; setCur(S.cur); paramChanged();});
+$('lampBtn').addEventListener('click',()=>{S.lamp=!S.lamp; const b=$('lampBtn'); b.setAttribute('aria-pressed',S.lamp); b.textContent=S.lamp?'💡 Шам қосулы':'Шамды қосу'; if(reduce) S.power=S.lamp?1:0; refreshSteps();});
+$('lanes').addEventListener('change',e=>{S.lanes=e.target.checked;});
+$('curRange').addEventListener('input',e=>setCur(+e.target.value));
+$('nudgeL').addEventListener('click',()=>setCur(S.cur-.5));
+$('nudgeR').addEventListener('click',()=>setCur(S.cur+.5));
+$('checkBtn').addEventListener('click',check);
+$('fillBtn').addEventListener('click',fillLam);
+$('clearBtn').addEventListener('click',()=>clearTable(false));
+$('db').addEventListener('input',refreshErrors); $('da').addEventListener('input',refreshErrors);
+$('cmp').addEventListener('toggle',refreshSteps);
+$('concl').addEventListener('input',refreshSteps);
+{ const c=$('view'); let drag=false;
+  const move=e=>{const r=c.getBoundingClientRect(); setCur((e.clientX-r.left-viewGeo.W/2)/viewGeo.ppm);};
+  c.addEventListener('pointerdown',e=>{drag=true; try{c.setPointerCapture(e.pointerId);}catch(_){ } move(e);});
+  c.addEventListener('pointermove',e=>{if(drag) move(e);});
+  ['pointerup','pointercancel'].forEach(n=>c.addEventListener(n,()=>{drag=false;}));
+}
+
+/* ---------- анимация ---------- */
+let last=0;
+function frame(t){
+  const dt=Math.min(60,t-last); last=t;
+  const target=S.lamp?1:0; if(S.power!==target){S.power+=Math.sign(target-S.power)*dt/450; if(Math.abs(S.power-target)<.02||(target===1&&S.power>1)||(target===0&&S.power<0)) S.power=target;}
+  drawBench(t); drawView(t); drawLupe();
+  requestAnimationFrame(frame);
+}
+buildTable(); refreshTable(); setCur(S.cur);
+requestAnimationFrame(frame);
+window.__lab={S,ROWS,bTrue,lamFormula,setCur};
+})();
+</script>
