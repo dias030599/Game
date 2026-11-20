@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QR-код — Arman Dala</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat+Brush&family=Rubik:wght@500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;min-height:100vh;background:linear-gradient(#1E9BE0,#8fd3f5);font-family:'Rubik',system-ui,Arial,sans-serif;color:#fff;text-align:center}
+#logo{height:110px;max-width:80%;object-fit:contain;background:#fff;border-radius:50%/45%;padding:6px 20px}
+h1{font-family:'Caveat Brush',cursive;font-weight:400;font-size:clamp(32px,6vw,64px);line-height:1;margin:0;color:#FFC928;text-shadow:0 3px 0 rgba(0,0,0,.25)}
+h1 small{display:block;color:#fff;font-size:.7em}
+#qrBox{background:#fff;padding:18px;border-radius:24px;box-shadow:0 10px 30px rgba(0,0,0,.25);line-height:0}
+#qr img,#qr canvas{display:block}
+p{margin:0;font-size:clamp(16px,2.4vw,26px);font-weight:700}
+code{background:rgba(0,0,0,.25);padding:6px 14px;border-radius:999px;font-size:clamp(12px,1.8vw,18px);word-break:break-all;max-width:94vw}
+.tools{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center}
+.tools input{font:500 14px 'Rubik',sans-serif;padding:9px 14px;border:0;border-radius:999px;width:min(420px,80vw)}
+button{font:700 15px 'Rubik',sans-serif;padding:9px 18px;border:0;border-radius:999px;background:#E4262B;color:#fff;cursor:pointer}
+body.full .tools{display:none}
+@media print{body{background:#fff;color:#1A1A1A}.tools{display:none}}
+</style>
+</head>
+<body>
+<img id="logo" src="logo.jpeg" alt="Arman Dala" onerror="this.style.display='none'">
+<h1>Arman Dala<small>Бегущий вожатый</small></h1>
+<div id="qrBox"><div id="qr"></div></div>
+<p>Наведи камеру телефона на QR-код и беги!</p>
+<code id="urlText"></code>
+<div class="tools">
+  <input id="urlIn" placeholder="Ссылка на игру" aria-label="Ссылка на игру">
+  <button id="upd">Обновить QR</button>
+  <button id="fs">На весь экран</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+(function(){
+  function gameUrl(){
+    var u=new URL(location.href);
+    u.hash='';u.search='';
+    u.pathname=u.pathname.replace(/[^\/]*$/,'');
+    var s=u.toString();
+    if(u.protocol==='file:')s+='index.html';
+    return s;
+  }
+  var url=gameUrl();
+  var qrEl=document.getElementById('qr');
+  function draw(){
+    qrEl.innerHTML='';
+    document.getElementById('urlText').textContent=url;
+    document.getElementById('urlIn').value=url;
+    var size=Math.max(220,Math.min(520,Math.floor(Math.min(innerWidth,innerHeight)*.5)));
+    if(typeof QRCode==='undefined'){qrEl.textContent='Не удалось загрузить QR-библиотеку. Проверь интернет.';return;}
+    new QRCode(qrEl,{text:url,width:size,height:size,correctLevel:QRCode.CorrectLevel.M});
+  }
+  document.getElementById('upd').onclick=function(){
+    var v=document.getElementById('urlIn').value.trim();
+    if(v){url=v;draw();}
+  };
+  document.getElementById('fs').onclick=function(){
+    document.body.classList.add('full');
+    var el=document.documentElement;
+    if(el.requestFullscreen)el.requestFullscreen().catch(function(){});
+  };
+  document.addEventListener('fullscreenchange',function(){
+    if(!document.fullscreenElement){document.body.classList.remove('full');draw();}
+  });
+  var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(draw,200);});
+  draw();
+})();
+</script>
+</body>
+</html>
